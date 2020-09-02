@@ -1,11 +1,17 @@
+import mimetypes
 import os
 import sys
+from pathlib import Path
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon, QPalette, QPixmap
+import cv2
+import filetype
+from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtGui import QIcon, QPalette, QPixmap, QKeySequence
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QMainWindow, QSizePolicy, QScrollArea, QVBoxLayout, \
-    QGroupBox, QFormLayout, QWidget, QHBoxLayout, QGridLayout
+    QGroupBox, QFormLayout, QWidget, QHBoxLayout, QGridLayout, QFileDialog, QAction, QShortcut
 from PyQt5 import uic
+
+from src.utils import print_log
 
 ROOT_DIR = os.path.realpath(os.pardir)
 UI_DIR = os.path.join(ROOT_DIR, 'designer')
@@ -20,38 +26,44 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.image = None
+
+        print_log("Start", "debug")
         self.initUI()
+        print_log("End", "debug")
 
     def initUI(self):
+        print_log("Start", "debug")
         # self.setGeometry(600, 100, 600, 800)
         self.setFixedSize(600, 800)
         self.setWindowTitle('Scroll Area Demonstration')
 
         self.imageLabel = QLabel("ImageLabel")
+        self.imageLabel.setAlignment(Qt.AlignCenter)
         self.imageLabel.setBackgroundRole(QPalette.Dark)
-        pixmap = QPixmap(os.path.join(IMG_DIR, "sample2.jpg"))
 
-        im_w, im_h = pixmap.size().width(), pixmap.size().height()
+        self.imageLabel = QLabel("ImageLabel")
         label_w, label_h = self.imageLabel.size().width(), self.imageLabel.size().height()
-        label_min = min(label_w, label_h)
+        self.label_min = min(label_w, label_h)
 
-        self.imageLabel.resize(label_min, label_min)
+        self.imageLabel.resize(self.label_min, self.label_min)
+        print_log("Resize imageLabel")
 
-        if im_w > im_h:
-            pixmap = pixmap.scaledToWidth(label_min)
-        else:
-            pixmap = pixmap.scaledToHeight(label_min)
+        self.set_image(os.path.join(IMG_DIR, "sample2.jpg"))
 
-        self.imageLabel.setPixmap(pixmap)
-        self.imageLabel.setScaledContents(True)
+        self.statusBar().showMessage("HI")
 
         self.openBtn = QPushButton("Open")
+        self.openBtn.clicked.connect(self.open_image)
 
-        self.saveBtn = QPushButton("Save")
+        self.detectBtn = QPushButton("Detect")
+        self.detectBtn.clicked.connect(self.detect_image)
+
+        self.compareBtn = QPushButton("Compare")
 
         self.viewWideBtn = QPushButton("View Wide")
 
-        self.compareBtn = QPushButton("Compare")
+        self.saveBtn = QPushButton("Save")
 
         self.scrollArea = QScrollArea()
 
@@ -66,7 +78,6 @@ class MainWindow(QMainWindow):
         self.layout = QVBoxLayout()
 
         self.layout.addWidget(self.imageLabel)
-        # todo: Align widgets in layout
 
         self.layout.addLayout(self.btnGroup)
 
@@ -75,6 +86,52 @@ class MainWindow(QMainWindow):
         centralWidget = QWidget()
         centralWidget.setLayout(self.layout)
         self.setCentralWidget(centralWidget)
+
+        # Shortcuts
+        self.openFile = QShortcut(QKeySequence("Ctrl+O"), self)
+        self.openFile.activated.connect(self.open_image)
+
+        print_log("End", "debug")
+
+    @pyqtSlot()
+    def open_image(self):
+        print_log("Start")
+        self.statusBar().showMessage("Select image...")
+        fname = QFileDialog.getOpenFileName(self, 'Open image', str(Path.home()),
+                                            "Image files (*.jpg *.jpeg *.gif *.png)")
+        print_log("File path is '{}'".format(fname[0]))
+
+        if fname[0]:
+            try:
+                kind = filetype.guess(fname[0])
+                print_log("Mime type: '{}'".format(kind.mime))
+                if kind.mime.split("/")[0] == "image":
+                    self.set_image(fname[0])
+                    print_log("Image label setting done.")
+                    self.statusBar().showMessage("Opened.")
+                else:
+                    print_log("Not Supported File")
+                    self.statusBar().showMessage("Not Supported file..")
+            except FileNotFoundError as e:
+                print_log("File Not Found!")
+                self.statusBar().showMessage("File not found!")
+        print_log("Finish")
+
+    @pyqtSlot()
+    def detect_image(self):
+        print_log("Start")
+
+    def set_image(self, image_path):
+        pixmap = QPixmap(image_path)
+        im_w, im_h = pixmap.size().width(), pixmap.size().height()
+        if im_w > im_h:
+            pixmap = pixmap.scaledToWidth(self.label_min)
+        else:
+            pixmap = pixmap.scaledToHeight(self.label_min)
+
+        self.imageLabel.setPixmap(pixmap)
+        self.image = cv2.imread(image_path)
+        cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
 
 def main():
