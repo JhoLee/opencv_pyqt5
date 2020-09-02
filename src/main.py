@@ -20,6 +20,9 @@ IMG_DIR = os.path.join(RESOURCE_DIR, 'img')
 
 form_class = uic.loadUiType(os.path.join(UI_DIR, "mainwindow.ui"))[0]
 
+HEIGHT = 800
+WIDTH = 600
+
 
 class MainWindow(QMainWindow):
 
@@ -34,7 +37,7 @@ class MainWindow(QMainWindow):
 
     def initUI(self):
         print_log("Start", "debug")
-        self.setFixedSize(600, 800)
+        self.setFixedSize(WIDTH, HEIGHT)
         self.setWindowTitle('Scroll Area Demonstration')
 
         # Widgets
