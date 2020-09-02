@@ -1,15 +1,15 @@
-import mimetypes
+import os
 import os
 import sys
 from pathlib import Path
 
 import cv2
 import filetype
-from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QIcon, QPalette, QPixmap, QKeySequence
-from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QMainWindow, QSizePolicy, QScrollArea, QVBoxLayout, \
-    QGroupBox, QFormLayout, QWidget, QHBoxLayout, QGridLayout, QFileDialog, QAction, QShortcut
 from PyQt5 import uic
+from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtGui import QPalette, QPixmap, QKeySequence
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QMainWindow, QScrollArea, QVBoxLayout, \
+    QWidget, QGridLayout, QFileDialog, QShortcut
 
 from src.utils import print_log
 
@@ -34,12 +34,11 @@ class MainWindow(QMainWindow):
 
     def initUI(self):
         print_log("Start", "debug")
-        # self.setGeometry(600, 100, 600, 800)
         self.setFixedSize(600, 800)
         self.setWindowTitle('Scroll Area Demonstration')
 
+        # Widgets
         self.imageLabel = QLabel("ImageLabel")
-        self.imageLabel.setAlignment(Qt.AlignCenter)
         self.imageLabel.setBackgroundRole(QPalette.Dark)
 
         self.imageLabel = QLabel("ImageLabel")
@@ -67,6 +66,7 @@ class MainWindow(QMainWindow):
 
         self.scrollArea = QScrollArea()
 
+        # Layouts
         self.btnGroup = QGridLayout()
         self.btnGroup.addWidget(self.openBtn, 0, 0)
         self.btnGroup.addWidget(self.saveBtn, 0, 1)
@@ -83,13 +83,13 @@ class MainWindow(QMainWindow):
 
         self.layout.addWidget(self.scrollArea)
 
-        centralWidget = QWidget()
-        centralWidget.setLayout(self.layout)
-        self.setCentralWidget(centralWidget)
-
         # Shortcuts
         self.openFile = QShortcut(QKeySequence("Ctrl+O"), self)
         self.openFile.activated.connect(self.open_image)
+
+        centralWidget = QWidget()
+        centralWidget.setLayout(self.layout)
+        self.setCentralWidget(centralWidget)
 
         print_log("End", "debug")
 
@@ -130,6 +130,7 @@ class MainWindow(QMainWindow):
             pixmap = pixmap.scaledToHeight(self.label_min)
 
         self.imageLabel.setPixmap(pixmap)
+        self.imageLabel.setAlignment(Qt.AlignCenter)
         self.image = cv2.imread(image_path)
         cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
