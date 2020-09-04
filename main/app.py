@@ -1,24 +1,21 @@
-import os
+import datetime
 import os
 import sys
 from pathlib import Path
 
 import cv2
 import filetype
-from PyQt5 import uic
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtGui import QPalette, QPixmap, QKeySequence
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QMainWindow, QScrollArea, QVBoxLayout, \
     QWidget, QGridLayout, QFileDialog, QShortcut
 
-from src.utils import print_log
+from main.utils import print_log
 
-ROOT_DIR = os.path.realpath(os.pardir)
-UI_DIR = os.path.join(ROOT_DIR, 'designer')
+ROOT_DIR = os.path.realpath(os.getcwd())
+print(ROOT_DIR)
 RESOURCE_DIR = os.path.join(ROOT_DIR, 'resources')
 IMG_DIR = os.path.join(RESOURCE_DIR, 'img')
-
-form_class = uic.loadUiType(os.path.join(UI_DIR, "mainwindow.ui"))[0]
 
 HEIGHT = 800
 WIDTH = 600
@@ -53,7 +50,7 @@ class MainWindow(QMainWindow):
 
         self.set_image(os.path.join(IMG_DIR, "sample2.jpg"))
 
-        self.statusBar().showMessage("HI")
+        self.set_status("HI")
 
         self.openBtn = QPushButton("Open")
         self.openBtn.clicked.connect(self.open_image)
@@ -72,9 +69,10 @@ class MainWindow(QMainWindow):
         # Layouts
         self.btnGroup = QGridLayout()
         self.btnGroup.addWidget(self.openBtn, 0, 0)
-        self.btnGroup.addWidget(self.saveBtn, 0, 1)
-        self.btnGroup.addWidget(self.viewWideBtn, 0, 2)
-        self.btnGroup.addWidget(self.compareBtn, 0, 3)
+        self.btnGroup.addWidget(self.detectBtn, 0, 1)
+        self.btnGroup.addWidget(self.compareBtn, 0, 2)
+        self.btnGroup.addWidget(self.viewWideBtn, 0, 3)
+        self.btnGroup.addWidget(self.saveBtn, 0, 4)
 
         self.viewLayout = QVBoxLayout()
 
@@ -99,30 +97,40 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def open_image(self):
         print_log("Start")
-        self.statusBar().showMessage("Select image...")
+        self.set_status("Select image...")
         fname = QFileDialog.getOpenFileName(self, 'Open image', str(Path.home()),
                                             "Image files (*.jpg *.jpeg *.gif *.png)")
-        print_log("File path is '{}'".format(fname[0]))
 
         if fname[0]:
+            print_log("File path is '{}'".format(fname[0]))
             try:
                 kind = filetype.guess(fname[0])
                 print_log("Mime type: '{}'".format(kind.mime))
                 if kind.mime.split("/")[0] == "image":
                     self.set_image(fname[0])
                     print_log("Image label setting done.")
-                    self.statusBar().showMessage("Opened.")
+                    self.set_status("Opened.")
                 else:
                     print_log("Not Supported File")
-                    self.statusBar().showMessage("Not Supported file..")
+                    self.set_status("Not Supported file..")
             except FileNotFoundError as e:
                 print_log("File Not Found!")
-                self.statusBar().showMessage("File not found!")
+                self.set_status("File not found!")
+        else:
+            print_log("File path is not defined.")
+            self.set_status("File not selected.")
         print_log("Finish")
 
     @pyqtSlot()
     def detect_image(self):
         print_log("Start")
+        self.set_status("Detecting...")
+        print_log("Shape: {}".format(self.image.shape))
+        if self.image is None:
+            print_log("Image not loaded!", "warn")
+            self.set_status("You must load an image.")
+        self.set_status("Detecting finished.")
+        print_log("End")
 
     def set_image(self, image_path):
         pixmap = QPixmap(image_path)
@@ -136,6 +144,13 @@ class MainWindow(QMainWindow):
         self.imageLabel.setAlignment(Qt.AlignCenter)
         self.image = cv2.imread(image_path)
         cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+
+    def set_status(self, msg: str):
+        msg = "({timestamp}) {msg}".format(
+            timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            msg=msg,
+        )
+        self.statusBar().showMessage(msg)
 
 
 def main():
