@@ -5,11 +5,14 @@ from pathlib import Path
 
 import cv2
 import filetype
+import numpy as np
+import qimage2ndarray as q2n
 from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QPalette, QPixmap, QKeySequence
+from PyQt5.QtGui import QPalette, QPixmap, QKeySequence, QImage
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QMainWindow, QScrollArea, QVBoxLayout, \
     QWidget, QGridLayout, QFileDialog, QShortcut
 
+from image_editor.inference import InferenceModel
 from main.utils import print_log
 
 ROOT_DIR = os.path.realpath(os.getcwd())
@@ -48,7 +51,7 @@ class MainWindow(QMainWindow):
         self.imageLabel.resize(self.label_min, self.label_min)
         print_log("Resize imageLabel")
 
-        self.set_image(os.path.join(IMG_DIR, "sample2.jpg"))
+        self.show_image(os.path.join(IMG_DIR, "sample2.jpg"))
 
         self.set_status("HI")
 
@@ -107,8 +110,7 @@ class MainWindow(QMainWindow):
                 kind = filetype.guess(fname[0])
                 print_log("Mime type: '{}'".format(kind.mime))
                 if kind.mime.split("/")[0] == "image":
-                    self.set_image(fname[0])
-                    print_log("Image label setting done.")
+                    self.show_image(fname[0])
                     self.set_status("Opened.")
                 else:
                     print_log("Not Supported File")
@@ -125,15 +127,21 @@ class MainWindow(QMainWindow):
     def detect_image(self):
         print_log("Start")
         self.set_status("Detecting...")
-        print_log("Shape: {}".format(self.image.shape))
         if self.image is None:
             print_log("Image not loaded!", "warn")
             self.set_status("You must load an image.")
         self.set_status("Detecting finished.")
         print_log("End")
 
-    def set_image(self, image_path):
-        pixmap = QPixmap(image_path)
+    def show_image(self, img):
+        print_log("Start")
+        qimage = None
+        if isinstance(img, str):
+            qimage = QImage(img)
+        elif isinstance(img, np.ndarray):
+            qimage = q2n.array2qimage(img, normalize=False)
+
+        pixmap = QPixmap.fromImage(qimage)
         im_w, im_h = pixmap.size().width(), pixmap.size().height()
         if im_w > im_h:
             pixmap = pixmap.scaledToWidth(self.label_min)
@@ -142,8 +150,9 @@ class MainWindow(QMainWindow):
 
         self.imageLabel.setPixmap(pixmap)
         self.imageLabel.setAlignment(Qt.AlignCenter)
-        self.image = cv2.imread(image_path)
+        self.image = cv2.imread(img)
         cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        print_log("End")
 
     def set_status(self, msg: str):
         msg = "({timestamp}) {msg}".format(
